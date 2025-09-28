@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Heatmap - GitHub Pages</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <div id="sidebar">
+        <h2>🚁 Drone Heatmap</h2>
+        
+        <!-- Hoveddata filopplasting -->
+        <div class="control-group">
+            <label for="dataFile">📊 Last opp data (CSV/XLSX):</label>
+            <input type="file" id="dataFile" accept=".csv,.xlsx" />
+        </div>
+        
+        <!-- Helipads filopplasting -->
+        <div class="control-group">
+            <label for="helipadsFile">🚁 Last opp helipads (CSV):</label>
+            <input type="file" id="helipadsFile" accept=".csv" />
+        </div>
+        
+        <!-- Kolonnemapping -->
+        <div class="control-group">
+            <label for="latColumn">📍 Latitude kolonne:</label>
+            <select id="latColumn">
+                <option value="">Velg kolonne...</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="lonColumn">📍 Longitude kolonne:</label>
+            <select id="lonColumn">
+                <option value="">Velg kolonne...</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="timeColumn">⏰ Tidskolonne (valgfritt):</label>
+            <select id="timeColumn">
+                <option value="">Ingen tidskolonne</option>
+            </select>
+        </div>
+        
+        <!-- Heatmap kontroller -->
+        <div class="control-group">
+            <label for="radiusSlider">🔴 Radius: <span id="radiusValue">25</span>px</label>
+            <input type="range" id="radiusSlider" min="5" max="50" value="25" />
+        </div>
+        
+        <div class="control-group">
+            <label for="blurSlider">🌫️ Blur: <span id="blurValue">15</span>px</label>
+            <input type="range" id="blurSlider" min="5" max="30" value="15" />
+        </div>
+        
+        <!-- Tidsfilter -->
+        <div class="control-group" id="dateFilterGroup" style="display: none;">
+            <label for="fromDate">📅 Fra dato:</label>
+            <input type="date" id="fromDate" />
+            
+            <label for="toDate">📅 Til dato:</label>
+            <input type="date" id="toDate" />
+        </div>
+        
+        <!-- Statistikk -->
+        <div class="control-group">
+            <div id="pointCount">Punkter: 0</div>
+            <div id="filteredCount">Filtrert: 0</div>
+        </div>
+        
+        <!-- Demo knapp -->
+        <div class="control-group">
+            <button id="loadDemo">🎯 Last demo-data</button>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script src="assets/script.js"></script>
+</body>
+</html>
