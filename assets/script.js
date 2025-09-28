@@ -1,10 +1,7 @@
 // Globale variabler
 let map;
 let heatLayer;
-let helipadsGroup;
 let currentData = [];
-let filteredData = [];
-let currentMapping = { latKey: '', lonKey: '', timeKey: '' };
 
 // Initialiser kart når DOM er lastet
 document.addEventListener('DOMContentLoaded', function() {
@@ -37,21 +34,16 @@ function initMap() {
             1.0: 'red'
         }
     }).addTo(map);
-    
-    // Opprett helipads gruppe
-    helipadsGroup = L.layerGroup().addTo(map);
 }
 
 // 2) Hjelpefunksjoner
 function detectColumns(headers) {
     const latPatterns = ['lat', 'latitude', 'breddegrad', 'y'];
     const lonPatterns = ['lon', 'lng', 'long', 'longitude', 'lengdegrad', 'x'];
-    const timePatterns = ['time', 'timestamp', 'ts', 'date', 'dato', 'fra', 'from', 'start'];
     
     const detected = {
         latKey: '',
-        lonKey: '',
-        timeKey: ''
+        lonKey: ''
     };
     
     headers.forEach(header => {
@@ -62,9 +54,6 @@ function detectColumns(headers) {
         }
         if (lonPatterns.some(pattern => lowerHeader.includes(pattern))) {
             detected.lonKey = header;
-        }
-        if (timePatterns.some(pattern => lowerHeader.includes(pattern))) {
-            detected.timeKey = header;
         }
     });
     
@@ -142,7 +131,7 @@ function parseXLSX(file) {
     });
 }
 
-function applyMapping(rows, mapping) {
+function processData(rows, mapping) {
     const validPoints = [];
     
     rows.forEach((row, index) => {
@@ -161,20 +150,9 @@ function applyMapping(rows, mapping) {
                 return;
             }
             
-            let timestamp = null;
-            if (mapping.timeKey && row[mapping.timeKey]) {
-                const timeStr = row[mapping.timeKey];
-                timestamp = new Date(timeStr);
-                if (isNaN(timestamp.getTime())) {
-                    console.warn(`Ugyldig tidsstempel på rad ${index + 1}:`, timeStr);
-                    timestamp = null;
-                }
-            }
-            
             validPoints.push({
                 lat: lat,
                 lon: lon,
-                ts: timestamp,
                 originalRow: row
             });
         } catch (error) {
@@ -185,33 +163,14 @@ function applyMapping(rows, mapping) {
     return validPoints;
 }
 
-function filterByDate(points, fromDate, toDate) {
-    if (!fromDate && !toDate) return points;
-    
-    return points.filter(point => {
-        if (!point.ts) return true; // Behold punkter uten tidsstempel
-        
-        const pointTime = point.ts.getTime();
-        const fromTime = fromDate ? new Date(fromDate).getTime() : 0;
-        const toTime = toDate ? new Date(toDate).getTime() : Number.MAX_SAFE_INTEGER;
-        
-        return pointTime >= fromTime && pointTime <= toTime;
-    });
-}
-
-function updateCount(total, filtered) {
+function updateCount(total) {
     document.getElementById('pointCount').textContent = `Punkter: ${total}`;
-    document.getElementById('filteredCount').textContent = `Filtrert: ${filtered}`;
 }
 
-function drawHeat(points, options = {}) {
+function drawHeat(points) {
     const heatPoints = points.map(point => [point.lat, point.lon, 1]);
     
     heatLayer.setLatLngs(heatPoints);
-    heatLayer.setOptions({
-        radius: options.radius || 25,
-        blur: options.blur || 15
-    });
     
     // Fit bounds hvis vi har punkter
     if (points.length > 0) {
@@ -223,102 +182,13 @@ function drawHeat(points, options = {}) {
     }
 }
 
-function loadHelipads(file) {
-    return new Promise((resolve, reject) => {
-        Papa.parse(file, {
-            header: true,
-            worker: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                try {
-                    // Fjern eksisterende helipads
-                    helipadsGroup.clearLayers();
-                    
-                    results.data.forEach(row => {
-                        const lat = toNumber(row.lat);
-                        const lon = toNumber(row.lon);
-                        const name = row.name || 'Helipad';
-                        
-                        if (isNaN(lat) || isNaN(lon)) {
-                            console.warn('Ugyldig helipad koordinat:', row);
-                            return;
-                        }
-                        
-                        // Legg til marker
-                        const marker = L.circleMarker([lat, lon], {
-                            radius: 6,
-                            fillColor: '#FF5722',
-                            color: '#fff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        }).bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`);
-                        
-                        helipadsGroup.addLayer(marker);
-                        
-                        // Legg til sirkler for 250m, 500m, 1000m
-                        const circles = [
-                            { radius: 250, color: '#FF5722', className: 'helipad-circle-250' },
-                            { radius: 500, color: '#FF9800', className: 'helipad-circle-500' },
-                            { radius: 1000, color: '#4CAF50', className: 'helipad-circle-1000' }
-                        ];
-                        
-                        circles.forEach(circle => {
-                            const circleLayer = L.circle([lat, lon], {
-                                radius: circle.radius,
-                                color: circle.color,
-                                weight: 2,
-                                fill: false,
-                                dashArray: '5,5'
-                            });
-                            helipadsGroup.addLayer(circleLayer);
-                        });
-                    });
-                    
-                    resolve(results.data.length);
-                } catch (error) {
-                    reject(error);
-                }
-            },
-            error: function(error) {
-                reject(error);
-            }
-        });
-    });
-}
-
 // 3) UI-hendelser
 function setupEventListeners() {
     // Hoveddata filopplasting
     document.getElementById('dataFile').addEventListener('change', handleDataFile);
     
-    // Helipads filopplasting
-    document.getElementById('helipadsFile').addEventListener('change', handleHelipadsFile);
-    
-    // Kolonnemapping endringer
-    document.getElementById('latColumn').addEventListener('change', handleMappingChange);
-    document.getElementById('lonColumn').addEventListener('change', handleMappingChange);
-    document.getElementById('timeColumn').addEventListener('change', handleMappingChange);
-    
-    // Slider endringer
-    document.getElementById('radiusSlider').addEventListener('input', handleSliderChange);
-    document.getElementById('blurSlider').addEventListener('input', handleSliderChange);
-    
-    // Dato filter endringer
-    document.getElementById('fromDate').addEventListener('change', handleDateFilter);
-    document.getElementById('toDate').addEventListener('change', handleDateFilter);
-    
     // Demo knapp
     document.getElementById('loadDemo').addEventListener('click', loadDemoData);
-    
-    // Oppdater slider labels
-    document.getElementById('radiusSlider').addEventListener('input', function() {
-        document.getElementById('radiusValue').textContent = this.value;
-    });
-    
-    document.getElementById('blurSlider').addEventListener('input', function() {
-        document.getElementById('blurValue').textContent = this.value;
-    });
 }
 
 async function handleDataFile(event) {
@@ -337,23 +207,25 @@ async function handleDataFile(event) {
             throw new Error('Ustøttet filformat');
         }
         
-        currentData = result.rows;
-        populateColumnSelects(result.headers);
-        
-        // Prøv autodeteksjon
+        // Prøv autodeteksjon av kolonner
         const detected = detectColumns(result.headers);
-        if (detected.latKey) {
-            document.getElementById('latColumn').value = detected.latKey;
-        }
-        if (detected.lonKey) {
-            document.getElementById('lonColumn').value = detected.lonKey;
-        }
-        if (detected.timeKey) {
-            document.getElementById('timeColumn').value = detected.timeKey;
-            document.getElementById('dateFilterGroup').style.display = 'block';
+        
+        if (!detected.latKey || !detected.lonKey) {
+            throw new Error('Kunne ikke finne latitude og longitude kolonner. Sjekk at filen har kolonner som "lat", "latitude", "lon", "longitude" etc.');
         }
         
-        handleMappingChange();
+        // Prosesser data
+        const processedData = processData(result.rows, detected);
+        
+        if (processedData.length === 0) {
+            throw new Error('Ingen gyldige koordinater funnet i filen');
+        }
+        
+        currentData = processedData;
+        updateCount(processedData.length);
+        drawHeat(processedData);
+        
+        console.log(`Lastet ${processedData.length} punkter fra ${file.name}`);
         
     } catch (error) {
         alert('Feil ved lasting av fil: ' + error.message);
@@ -361,90 +233,6 @@ async function handleDataFile(event) {
     } finally {
         showLoading(false);
     }
-}
-
-async function handleHelipadsFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    try {
-        showLoading(true);
-        const count = await loadHelipads(file);
-        console.log(`Lastet ${count} helipads`);
-    } catch (error) {
-        alert('Feil ved lasting av helipads: ' + error.message);
-        console.error('Helipads lasting feil:', error);
-    } finally {
-        showLoading(false);
-    }
-}
-
-function populateColumnSelects(headers) {
-    const selects = ['latColumn', 'lonColumn', 'timeColumn'];
-    
-    selects.forEach(selectId => {
-        const select = document.getElementById(selectId);
-        const currentValue = select.value;
-        
-        // Behold første option (placeholder)
-        select.innerHTML = selectId === 'timeColumn' ? 
-            '<option value="">Ingen tidskolonne</option>' : 
-            '<option value="">Velg kolonne...</option>';
-        
-        headers.forEach(header => {
-            const option = document.createElement('option');
-            option.value = header;
-            option.textContent = header;
-            select.appendChild(option);
-        });
-        
-        // Prøv å gjenopprett valgt verdi
-        if (currentValue && headers.includes(currentValue)) {
-            select.value = currentValue;
-        }
-    });
-}
-
-function handleMappingChange() {
-    const latKey = document.getElementById('latColumn').value;
-    const lonKey = document.getElementById('lonColumn').value;
-    const timeKey = document.getElementById('timeColumn').value;
-    
-    if (!latKey || !lonKey) {
-        updateCount(0, 0);
-        drawHeat([]);
-        return;
-    }
-    
-    currentMapping = { latKey, lonKey, timeKey };
-    
-    const mappedData = applyMapping(currentData, currentMapping);
-    currentData = mappedData;
-    
-    handleDateFilter();
-}
-
-function handleDateFilter() {
-    const fromDate = document.getElementById('fromDate').value;
-    const toDate = document.getElementById('toDate').value;
-    
-    filteredData = filterByDate(currentData, fromDate, toDate);
-    
-    updateCount(currentData.length, filteredData.length);
-    
-    const radius = parseInt(document.getElementById('radiusSlider').value);
-    const blur = parseInt(document.getElementById('blurSlider').value);
-    
-    drawHeat(filteredData, { radius, blur });
-}
-
-function handleSliderChange() {
-    if (filteredData.length === 0) return;
-    
-    const radius = parseInt(document.getElementById('radiusSlider').value);
-    const blur = parseInt(document.getElementById('blurSlider').value);
-    
-    drawHeat(filteredData, { radius, blur });
 }
 
 // 4) Demo-data
@@ -461,27 +249,21 @@ async function loadDemoData() {
         const csvText = await response.text();
         const result = await parseCSV(new Blob([csvText], { type: 'text/csv' }));
         
-        currentData = result.rows;
-        populateColumnSelects(result.headers);
+        // Autodeteksjon
+        const detected = detectColumns(result.headers);
         
-        // Sett opp mapping
-        document.getElementById('latColumn').value = 'lat';
-        document.getElementById('lonColumn').value = 'lon';
-        document.getElementById('timeColumn').value = 'timestamp';
-        document.getElementById('dateFilterGroup').style.display = 'block';
-        
-        handleMappingChange();
-        
-        // Last helipads
-        try {
-            const helipadsResponse = await fetch('data/helipads.csv');
-            if (helipadsResponse.ok) {
-                const helipadsText = await helipadsResponse.text();
-                await loadHelipads(new Blob([helipadsText], { type: 'text/csv' }));
-            }
-        } catch (error) {
-            console.warn('Kunne ikke laste helipads:', error);
+        if (!detected.latKey || !detected.lonKey) {
+            throw new Error('Demo-data har ikke riktige kolonnenavn');
         }
+        
+        // Prosesser data
+        const processedData = processData(result.rows, detected);
+        
+        currentData = processedData;
+        updateCount(processedData.length);
+        drawHeat(processedData);
+        
+        console.log(`Lastet ${processedData.length} demo-punkter`);
         
     } catch (error) {
         alert('Feil ved lasting av demo-data: ' + error.message);

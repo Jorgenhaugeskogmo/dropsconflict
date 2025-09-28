@@ -17,64 +17,15 @@
     <div id="sidebar">
         <h2>🚁 Drone Heatmap</h2>
         
-        <!-- Hoveddata filopplasting -->
+        <!-- Filopplasting -->
         <div class="control-group">
             <label for="dataFile">📊 Last opp data (CSV/XLSX):</label>
             <input type="file" id="dataFile" accept=".csv,.xlsx" />
         </div>
         
-        <!-- Helipads filopplasting -->
-        <div class="control-group">
-            <label for="helipadsFile">🚁 Last opp helipads (CSV):</label>
-            <input type="file" id="helipadsFile" accept=".csv" />
-        </div>
-        
-        <!-- Kolonnemapping -->
-        <div class="control-group">
-            <label for="latColumn">📍 Latitude kolonne:</label>
-            <select id="latColumn">
-                <option value="">Velg kolonne...</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="lonColumn">📍 Longitude kolonne:</label>
-            <select id="lonColumn">
-                <option value="">Velg kolonne...</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="timeColumn">⏰ Tidskolonne (valgfritt):</label>
-            <select id="timeColumn">
-                <option value="">Ingen tidskolonne</option>
-            </select>
-        </div>
-        
-        <!-- Heatmap kontroller -->
-        <div class="control-group">
-            <label for="radiusSlider">🔴 Radius: <span id="radiusValue">25</span>px</label>
-            <input type="range" id="radiusSlider" min="5" max="50" value="25" />
-        </div>
-        
-        <div class="control-group">
-            <label for="blurSlider">🌫️ Blur: <span id="blurValue">15</span>px</label>
-            <input type="range" id="blurSlider" min="5" max="30" value="15" />
-        </div>
-        
-        <!-- Tidsfilter -->
-        <div class="control-group" id="dateFilterGroup" style="display: none;">
-            <label for="fromDate">📅 Fra dato:</label>
-            <input type="date" id="fromDate" />
-            
-            <label for="toDate">📅 Til dato:</label>
-            <input type="date" id="toDate" />
-        </div>
-        
         <!-- Statistikk -->
         <div class="control-group">
             <div id="pointCount">Punkter: 0</div>
-            <div id="filteredCount">Filtrert: 0</div>
         </div>
         
         <!-- Demo knapp -->
